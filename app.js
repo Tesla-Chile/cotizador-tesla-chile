@@ -228,6 +228,7 @@ const technicalSpecs = {
 const form = document.querySelector("#quoteForm");
 const fields = {
   model: document.querySelector("#model"),
+  year: document.querySelector("#year"),
   version: document.querySelector("#version"),
   paint: document.querySelector("#paint"),
   wheels: document.querySelector("#wheels"),
@@ -380,6 +381,7 @@ function calculate() {
     rut: document.querySelector("#rut").value || "",
     date: formatQuoteDate(document.querySelector("#date").value),
     model: fields.model.value,
+    year: fields.year.value,
     version: version.name,
     autonomy: version.autonomy,
     acceleration: accelerationValue(specValue(specs, "Aceleración 0-100 km/h")),
@@ -570,7 +572,7 @@ function createPdfBlob(quote) {
 
     label("Vehículo", left, 568);
     rect(left, 408, right - left, 132, 8, "0.96 0.96 0.98");
-    text(`${vehicleTitle} 2026`, left + 22, 510, 15, "0.10 0.11 0.14", "F2");
+    text(`${vehicleTitle} ${quote.year}`, left + 22, 510, 15, "0.10 0.11 0.14", "F2");
     label("Autonomía (WLTP)", left + 22, 482);
     text(quote.autonomy, left + 22, 466, 11, "0.10 0.11 0.14", "F2");
     label("Tracción", left + 195, 482);
@@ -709,7 +711,7 @@ function createPdfBlob(quote) {
     const spec = (key, fallback = "-") => specValue(specs, key, fallback);
 
     label("Vehículo cotizado", left, 684);
-    wrapText(`${vehicleTitle} 2026`, 32).slice(0, 2).forEach((lineText, index) => {
+    wrapText(`${vehicleTitle} ${quote.year}`, 32).slice(0, 2).forEach((lineText, index) => {
       text(lineText, left, 662 - index * 24, 20, index === 0 ? "0.10 0.11 0.14" : "0.62 0.63 0.68", "F2");
     });
     const configText = `Configuración cotizada: ${quote.paint} · ${quote.wheels} · ${quote.interior}. Cifras referenciales según catálogo de configuración vigente.`;
