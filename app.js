@@ -82,6 +82,16 @@ const catalog = {
         { name: "Rines 20\"", price: 1500000, note: "Opcional" }
       ]
     }
+  ],
+  "Model Y L": [
+    {
+      name: "Premium",
+      price: 47900000,
+      autonomy: "681 km",
+      wheels: [
+        { name: "Rines 19\"", price: 0, note: "Incluidos" }
+      ]
+    }
   ]
 };
 
@@ -93,7 +103,8 @@ const options = {
     { name: "Azul Marino", price: 1000000, note: "Opcional" },
     { name: "Azul Glaciar", price: 1000000, note: "Opcional" },
     { name: "Rojo Ultra", price: 1500000, note: "Opcional" },
-    { name: "Plata Metálico", price: 1500000, note: "Opcional" }
+    { name: "Plata Metálico", price: 1500000, note: "Opcional" },
+    { name: "Plata Cósmica", price: 1500000, note: "Opcional" }
   ],
   interior: [
     { name: "Interior negro", price: 0, note: "Incluido" },
@@ -222,6 +233,21 @@ const technicalSpecs = {
       "Garantía vehículo básico": "4 años u 80.000 km, lo que ocurra primero",
       "Garantía batería y unidad de potencia": "8 años o 192.000 km, lo que ocurra primero"
     }
+  },
+  "Model Y L": {
+    "Premium": {
+      "Propulsión": "Dual Motor All-Wheel Drive",
+      "Aceleración 0-100 km/h": "De 0 a 100 km/h en 5.0 seg.",
+      "Peso (masa en vacío)": "2,088 kg",
+      "Carga": "2,539 litros",
+      "Rines técnicos": "19\"",
+      "Asientos": "Hasta 6 asientos",
+      "Pantallas": "Pantalla táctil central de 16\"; Pantalla táctil de 8\" para la segunda fila",
+      "Altura libre sobre el suelo": "169 mm",
+      "Ancho total": "Espejos plegados: 1,982 mm; espejos extendidos: 2,129 mm",
+      "Altura total": "1,668 mm",
+      "Longitud total": "4,969 mm"
+    }
   }
 };
 
@@ -337,7 +363,7 @@ function extendedMirrorWidth(value) {
 }
 
 function accelerationValue(value) {
-  const match = String(value || "").match(/en\s+([\d,]+)\s*s/i);
+  const match = String(value || "").match(/en\s+([\d,.]+)\s*(?:s|seg\.?)/i);
   return match ? `${match[1]} s` : value || "-";
 }
 
@@ -741,7 +767,7 @@ function createPdfBlob(quote) {
     label("Dimensiones y peso", left, 422);
     const dimensionRows = [
       ["Peso", spec("Peso (masa en vacío)")],
-      ["Asientos", quote.seats],
+      ["Asientos", spec("Asientos")],
       ["Rines", quote.wheels],
       ["Longitud total", spec("Longitud total")],
       ["Altura total", spec("Altura total")],
