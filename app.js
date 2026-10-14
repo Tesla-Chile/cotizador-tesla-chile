@@ -276,7 +276,7 @@ let latestQuote = null;
 const saveStatus = document.querySelector("#saveStatus");
 const ORDER_FEE = 300000;
 const DOCUMENTATION_FEE = 100000;
-const FIXED_DISCOUNT = 0;
+const VAT_RATE = 0.19;
 
 function optionLabel(item, includedText = "incluido") {
   const label = item.note || includedText;
@@ -386,20 +386,28 @@ function calculate() {
   const wheels = selected(fields.wheels, version.wheels);
   const interior = selected(fields.interior, options.interior);
   const quantity = Math.max(1, Number(fields.quantity.value) || 1);
-  const discount = FIXED_DISCOUNT;
   const specs = specsFor(fields.model.value, version.name);
   const propulsión = specValue(specs, "Propulsión", version.name.includes("AWD") ? "Dual Motor All-Wheel Drive" : "Rear-Wheel Drive");
 
   const unit = version.price + paint.price + wheels.price + interior.price;
+  const requestedDiscount = Number(fields.discount.value);
+  const discount = Number.isFinite(requestedDiscount)
+    ? Math.min(unit, Math.max(0, Math.round(requestedDiscount)))
+    : 0;
+  fields.discount.max = String(unit);
+  if (fields.discount.value !== "" && requestedDiscount !== discount) {
+    fields.discount.value = String(discount);
+  }
   const subtotal = unit * quantity;
   const totalDiscount = Math.min(subtotal, discount * quantity);
-  const grandTotal = subtotal - totalDiscount + ORDER_FEE + DOCUMENTATION_FEE;
+  const orderFee = ORDER_FEE * quantity;
+  const documentationFee = DOCUMENTATION_FEE * quantity;
+  const grandTotal = subtotal - totalDiscount + orderFee + documentationFee;
 
   totals.unitPrice.textContent = CLP.format(unit);
   totals.subtotal.textContent = CLP.format(subtotal);
   totals.totalDiscount.textContent = `-${CLP.format(totalDiscount)}`;
   totals.grandTotal.textContent = CLP.format(grandTotal);
-  fields.discount.value = CLP.format(FIXED_DISCOUNT);
   fields.printClientTitle.textContent = fields.client.value || "Cliente";
 
   latestQuote = {
@@ -427,8 +435,8 @@ function calculate() {
     unit,
     subtotal,
     totalDiscount,
-    orderFee: ORDER_FEE,
-    documentationFee: DOCUMENTATION_FEE,
+    orderFee,
+    documentationFee,
     grandTotal
   };
 }
@@ -615,12 +623,12 @@ function createPdfBlob(quote) {
 
     label("Detalle", left, 372);
     label("Concepto", left, 346);
-    const quantityCenterX = 337;
-    const unitPriceCenterX = 419;
-    const amountCenterX = 521;
+    const quantityCenterX = 321;
+    const unitPriceCenterX = 393;
+    const amountCenterX = 494;
     labelCentered("Cant.", quantityCenterX, 346);
-    labelCentered("Precio unitario", unitPriceCenterX, 346);
-    labelCentered("Importe", amountCenterX, 346);
+    labelCentered("Precio unitario + IVA", unitPriceCenterX, 346);
+    labelCentered("Importe + IVA", amountCenterX, 346);
     line(left, 338, right, 338, "0.80 0.81 0.84");
 
     const detailRows = [
@@ -685,9 +693,15 @@ function createPdfBlob(quote) {
         textY -= index < detailLines.length - 1 ? detailGap : 0;
       });
       const valueY = rowCenter - textVisualOffset(valueSize);
+      const vatSize = compactDetailRows ? 7.4 : 8;
       textCentered(row.qty, quantityCenterX, valueY, valueSize);
-      textCentered(money(row.unit), unitPriceCenterX, valueY, valueSize);
-      textCentered(money(row.amount), amountCenterX, valueY, valueSize);
+      [[row.unit, unitPriceCenterX], [row.amount, amountCenterX]].forEach(([gross, centerX]) => {
+        const net = Math.round(gross / (1 + VAT_RATE));
+        // Preserve the gross amount when rounding the breakdown to whole pesos.
+        const vat = gross - net;
+        textCentered(`${money(net)} neto`, centerX, valueY + 6, valueSize);
+        textCentered(`+ ${money(vat)} IVA (19%)`, centerX, valueY - 6, vatSize, "0.36 0.37 0.42");
+      });
       line(left, rowBottom, right, rowBottom, "0.88 0.89 0.91");
       rowTop = rowBottom;
     });
@@ -716,8 +730,8 @@ function createPdfBlob(quote) {
       summaryRows.push(["Descuento", `-${money(quote.totalDiscount)}`]);
     }
     summaryRows.push(
-      ["Costo de orden", money(quote.orderFee)],
-      ["Costo de inscripción", money(quote.documentationFee)]
+      [quote.quantity > 1 ? "Costo de órdenes" : "Costo de orden", money(quote.orderFee)],
+      [quote.quantity > 1 ? "Costo de inscripciones" : "Costo de inscripción", money(quote.documentationFee)]
     );
     summaryRows.forEach(([summaryLabel, summaryValue], index) => {
       const y = 166 - index * 22;
@@ -875,6 +889,7 @@ function createPdfBlob(quote) {
 
 function downloadQuotePdf() {
   calculate();
+  if (!form.reportValidity()) return;
   const quote = latestQuote;
   const blob = createPdfBlob(quote);
   const url = URL.createObjectURL(blob);
